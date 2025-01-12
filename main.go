@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/naluneotlichno/FP-GO-API/database"
+	"github.com/naluneotlichno/FP-GO-API/nextdate"
 )
 
 func main() {
@@ -80,10 +81,7 @@ func startServer() {
 	}
 
 	log.Printf("✅ 🚀 Сервер выезжает на порт %s. Подрубаемся!", port)
-
-	go func() {
-		if err := http.ListenAndServe(":"+port, nil); err != nil {
-			log.Fatalf("❌ Ой-ой, сервер упал: %v", err)
-		}
-	}()
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatalf("❌ Ой-ой, сервер упал: %v", err)
+	}
 }
