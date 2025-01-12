@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"os"
 	"net/http"
-	"runtime"
+	"os"
 	"path/filepath"
-	"github.com/naluneotlicno/FP-GO-API/database"
+	"runtime"
+	"time"
+
+	"github.com/naluneotlichno/FP-GO-API/database"
 )
 
 func main() {
@@ -17,7 +20,35 @@ func main() {
 		log.Fatalf("❌ Ошибка повторной инициализации БД (в main): %v", err)
 	}
 
+	log.Println("✅ [main()] Регистрируем обработчик для /api/nextdate")
+	http.HandleFunc("/api/nextdate", handleNextDate)
+
 	startServer()
+}
+
+func handleNextDate(w http.ResponseWriter, r *http.Request) {
+	log.Println("✅ [handleNextDate] Запрос на расчет даты получен!")
+
+	nowStr := r.FormValue("now")    // Получаем "now" из запроса
+	dateStr := r.FormValue("date")  // Получаем "date"
+	repeat := r.FormValue("repeat") // Получаем "repeat"
+
+	// ✅ Проверяем и парсим `now`
+	now, err := time.Parse("20060102", nowStr)
+	if err != nil {
+		http.Error(w, "Некорректная дата now", http.StatusBadRequest)
+		return
+	}
+
+	// ✅ Вызываем NextDate(), которая должна рассчитать следующую дату
+	nextDate, err := NextDate(now, dateStr, repeat)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// ✅ Отправляем пользователю ответ в нужном формате
+	fmt.Fprint(w, nextDate)
 }
 
 // getDBPath вычисляет путь к базе данных
@@ -41,7 +72,7 @@ func getDBPath() string {
 // startServer запускает HTTP-сервер
 func startServer() {
 	webDir := "./web"
-	http.Handle("/", http.FileServer(http.Dir(webDir)))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(webDir))))
 
 	port := os.Getenv("TODO_PORT")
 	if port == "" {
@@ -50,7 +81,9 @@ func startServer() {
 
 	log.Printf("✅ 🚀 Сервер выезжает на порт %s. Подрубаемся!", port)
 
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("❌ Ой-ой, сервер упал: %v", err)
-	}
+	go func() {
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
+			log.Fatalf("❌ Ой-ой, сервер упал: %v", err)
+		}
+	}()
 }
