@@ -14,21 +14,21 @@ import (
 )
 
 func main() {
-	log.Println("✅ 🔥 [main()] Запускаем нашего монстра!")
+	log.Println("✅ 🔥 Запускаем нашего монстра!")
 
 	dbPath := getDBPath()
 	if err := database.InitDB(dbPath); err != nil {
 		log.Fatalf("❌ Ошибка повторной инициализации БД (в main): %v", err)
 	}
 
-	log.Println("✅ [main()] Регистрируем обработчик для /api/nextdate")
+	log.Println("✅ Регистрируем обработчик для /api/nextdate")
 	http.HandleFunc("/api/nextdate", handleNextDate)
 
 	startServer()
 }
 
 func handleNextDate(w http.ResponseWriter, r *http.Request) {
-	log.Println("✅ [handleNextDate] Запрос на расчет даты получен!")
+	log.Println("✅ Запрос на расчет даты получен!")
 
 	nowStr := r.FormValue("now")    // Получаем "now" из запроса
 	dateStr := r.FormValue("date")  // Получаем "date"
@@ -42,7 +42,7 @@ func handleNextDate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ✅ Вызываем NextDate(), которая должна рассчитать следующую дату
-	nextDate, err := NextDate(now, dateStr, repeat)
+	nextDate, err := nextdate.NextDate(now, dateStr, repeat)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
