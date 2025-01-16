@@ -47,7 +47,7 @@ func InitDB(dbPath string) error {
 	return nil
 }
 
-func GetDBP() string {
+func GetDB() string {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		log.Println("❌ runtime.Caller(0) не сработал, dbPath будет 'scheduler.db'")
