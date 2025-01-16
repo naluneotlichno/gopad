@@ -13,7 +13,7 @@ func main() {
 	log.Println("✅ 🔥 Запускаем нашего монстра!")
 
 	// ✅ Инициализация базы данных
-	if err := database.InitDB(database.GetDBPath()); err != nil {
+	if err := database.InitDB(database.GetDB()); err != nil {
 		log.Fatalf("❌ Ошибка инициализации БД: %v", err)
 	}
 

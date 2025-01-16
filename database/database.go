@@ -3,16 +3,16 @@ package database
 import (
 	"database/sql"
 	"log"
-	"os"
-	"path/filepath"
-	"runtime"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 )
 
+var db *sql.DB
+
 // InitDB создаёт таблицу scheduler, если её нет
 func InitDB(dbPath string) error {
+	var err error
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return err
@@ -47,19 +47,9 @@ func InitDB(dbPath string) error {
 	return nil
 }
 
-func GetDB() string {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Println("❌ runtime.Caller(0) не сработал, dbPath будет 'scheduler.db'")
-		return "scheduler.db"
+func GetDB() *sql.DB {
+	if db == nil {
+		log.Fatal("❌ База данных не инициализирована. Сначала вызовите InitDB()")
 	}
-
-	baseDir := filepath.Dir(filename)
-	dbPath := filepath.Join(baseDir, "scheduler.db")
-
-	if envDB := os.Getenv("TODO_DBFILE"); envDB != "" {
-		return envDB
-	}
-
-	return dbPath
+	return db
 }

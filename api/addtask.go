@@ -122,7 +122,7 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 		if req.Repeat != "" {
 			// 🌀 Если есть правило повторения, крутим наш волчок дальше!
-			nextDate, err := nextdate.NextDate(time.Now(), req.Date, req.Repeat)
+			nextDate, err := NextDate(time.Now(), req.Date, req.Repeat)
 			// 🔮 "NextDate" из пакета "nextdate" магическим образом вычислит,
 			// куда переносить просроченную задачу (например, на завтра).
 

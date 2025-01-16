@@ -24,7 +24,7 @@ func HandleNextDate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Вызываем функцию NextDate
-	nextDate, err := nextdate.NextDate(now, dateStr, repeat)
+	nextDate, err := NextDate(now, dateStr, repeat)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Ошибка расчета следующей даты: %s", err.Error()), http.StatusBadRequest)
 		return
