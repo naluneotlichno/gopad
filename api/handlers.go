@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/naluneotlichno/FP-GO-API/nextdate"
+	"github.com/naluneotlichno/FP-GO-API/api"
 )
 
 // HandleNextDate обрабатывает запросы на /api/nextdate
