@@ -13,7 +13,7 @@ func main() {
 	log.Println("✅ 🔥 Запускаем нашего монстра!")
 
 	// ✅ Инициализация базы данных
-	if err := database.InitDB(database.GetDB()); err != nil {
+	if err := database.InitDB(database.GetDBPath()); err != nil {
 		log.Fatalf("❌ Ошибка инициализации БД: %v", err)
 	}
 
@@ -24,13 +24,13 @@ func main() {
 	startServer()
 }
 
-// registerHandlers регистрирует все хендлеры
+// 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers() {
-	http.HandleFunc("/api/nextdate", api.HandleNextDate)        // Регистрация обработчика NextDate
-	http.Handle("/static/", http.FileServer(http.Dir("./web"))) // Статика
+	http.HandleFunc("/api/nextdate", api.HandleNextDate) // Регистрация обработчика NextDate
+	http.Handle("/", http.FileServer(http.Dir("./web"))) // Статика
 }
 
-// startServer запускает сервер
+// 🔥 startServer запускает сервер
 func startServer() {
 	port := os.Getenv("TODO_PORT")
 	if port == "" {
