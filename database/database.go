@@ -41,10 +41,9 @@ func InitDB(dbPath string) error {
 
 	log.Printf("✅🔌 Подключаемся к базе: %s", dbPath)
 
-	defer func() {
-		if err := db.Ping(); err != nil {
-			return fmt.Errorf("❌ Не удалось подключиться к базе: %w", err)
-		}
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("❌ Не удалось подключиться к базе: %w", err)
+	}
 
 	createTableSQL := `
 	CREATE TABLE IF NOT EXISTS scheduler (
