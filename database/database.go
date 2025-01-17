@@ -2,11 +2,10 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"path/filepath"
-	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
@@ -15,16 +14,16 @@ import (
 var db *sql.DB
 
 func GetDBPath() string {
-	// Возвращаем путь к базе данных как строку
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Println("❌ runtime.Caller(0) не сработал, dbPath будет 'scheduler.db'")
-		return "scheduler.db"
+	// Получаем путь к корневой директории проекта
+	workingDir, err := os.Getwd() // Это вернёт текущую рабочую директорию
+	if err != nil {
+		log.Fatalf("❌ Ошибка определения рабочего каталога: %v", err)
 	}
 
-	baseDir := filepath.Dir(filename)
-	dbPath := filepath.Join(baseDir, "scheduler.db")
+	// Добавляем имя файла базы данных
+	dbPath := filepath.Join(workingDir, "scheduler.db")
 
+	// Если переменная окружения TODO_DBFILE задана, используем её
 	if envDB := os.Getenv("TODO_DBFILE"); envDB != "" {
 		return envDB
 	}

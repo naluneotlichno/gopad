@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -26,6 +25,8 @@ type TaskResponse struct {
 
 // 🔥 AddTaskHandler обрабатывает POST-запросы на /api/task
 func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
+	// ✅ Устанавливаем заголовок
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if r.Method != http.MethodPost {
 		http.Error(w, `{"error": "Метод не поддерживается"}`, http.StatusMethodNotAllowed)
 		return
@@ -34,7 +35,6 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	// ✅ Декодируем JSON-запрос
 	var req TaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("❌ Ошибка десериализации JSON: %v", err)
 		http.Error(w, `{"error": "Ошибка десериализации JSON"}`, http.StatusBadRequest)
 		return
 	}
@@ -53,9 +53,15 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	// ✅ Парсим дату, если формат кривой — шлём ошибку
 	taskDate, err := time.Parse("20060102", req.Date)
 	if err != nil {
-		http.Error(w, `{"error": "Дата указана некорректно"}`, http.StatusBadRequest)
-		return
+		taskDate, err = time.Parse("02.01.2006", req.Date)
+		if err != nil {
+			http.Error(w, `{"error": "Дата указана некорректно"}`, http.StatusBadRequest)
+			return
+		}
 	}
+
+	// ✅ Проверяем дату на корректность
+	req.Date = taskDate.Format("20060102")
 
 	// ✅ Если дата в прошлом — применяем правило повторения
 	if taskDate.Before(time.Now()) {
@@ -89,14 +95,11 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	// ✅ Получаем ID новой задачи
 	taskID, err := res.LastInsertId()
 	if err != nil {
-		// 🙈 Если база сказала "не знаю я никаких ID",
-		// выдаём 500, ибо беда.
 		http.Error(w, `{"error": "Ошибка получения ID записи"}`, http.StatusInternalServerError)
 		return
 	}
 
 	// ✅ Возвращаем JSON-ответ в формате, который ожидает тест
 	resp := TaskResponse{ID: taskID}
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	json.NewEncoder(w).Encode(resp)
 }
