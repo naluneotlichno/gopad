@@ -34,7 +34,7 @@ func GetDBPath() string {
 // InitDB создаёт таблицу scheduler, если её нет
 func InitDB(dbPath string) error {
 	var err error
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return err
 	}
