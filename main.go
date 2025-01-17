@@ -26,8 +26,9 @@ func main() {
 
 // 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers() {
-	http.HandleFunc("/api/nextdate", api.HandleNextDate) // Регистрация обработчика NextDate
-	http.Handle("/", http.FileServer(http.Dir("./web"))) // Статика
+	http.HandleFunc("/api/task", api.AddTaskHandler) 
+	http.HandleFunc("/api/nextdate", api.HandleNextDate) 
+	http.Handle("/", http.FileServer(http.Dir("./web"))) 
 }
 
 // 🔥 startServer запускает сервер

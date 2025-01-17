@@ -75,21 +75,24 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	// ✅ Если дата в прошлом — применяем правило повторения
 	if taskDate.Before(time.Now()) {
-		log.Println("⏲️ [PastDate] Дата в прошлом. Применяем правило повторения")
-		if req.Repeat != "" {
-			nextDate, err := NextDate(time.Now(), req.Date, req.Repeat)
-			if err != nil {
-				log.Printf("❌ [RepeatRule] Ошибка правила повторения: %v", err)
-				http.Error(w, fmt.Sprintf(`{"error": "Неверный формат правила повторения: %s"}`, err.Error()), http.StatusBadRequest)
-				return
-			}
-			req.Date = nextDate
-			log.Printf("✅ [RepeatRule] Новая дата после повторения: %s", req.Date)
-		} else {
-			log.Println("📅 [PastDate] Дата в прошлом, но правило повторения отсутствует. Устанавливаем сегодняшнюю дату.")
-			req.Date = time.Now().Format("20060102")
-		}
-	}
+        log.Println("⏲️ [PastDate] Дата в прошлом. Применяем правило повторения")
+        if req.Repeat != "" {
+            nextDate, err := NextDate(time.Now(), req.Date, req.Repeat)
+            if err != nil {
+                log.Printf("❌ [RepeatRule] Ошибка правила повторения: %v", err)
+                http.Error(w,
+                    fmt.Sprintf(`{"error": "Неверный формат правила повторения: %s"}`, err.Error()),
+                    http.StatusBadRequest,
+                )
+                return
+            }
+            req.Date = nextDate
+            log.Printf("✅ [RepeatRule] Новая дата после повторения: %s", req.Date)
+        } else {
+            log.Println("📅 [PastDate] Дата в прошлом, повторение не указано. Ставим сегодняшнюю дату.")
+            req.Date = time.Now().Format("20060102")
+        }
+    }
 
 	// ✅ Подключаемся к базе данных
 	log.Println("🔗 [DBConnection] Подключаемся к базе данных")
@@ -122,7 +125,9 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("✅ [DBInsert] Новая задача добавлена с ID: %d", taskID)
 
 	// ✅ Возвращаем JSON-ответ в формате, который ожидает тест
-	resp := TaskResponse{ID: taskID}
-	log.Printf("📤 [Response] Отправляем ответ клиенту: %+v", resp)
-	json.NewEncoder(w).Encode(resp)
+    resp := TaskResponse{ID: taskID}
+    log.Printf("📤 [Response] Отправляем ответ клиенту: %+v", resp)
+    if err := json.NewEncoder(w).Encode(resp); err != nil {
+        log.Printf("❌ [Response] Ошибка кодирования ответа: %v", err)
+    }
 }
