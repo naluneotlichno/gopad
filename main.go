@@ -28,6 +28,7 @@ func main() {
 func registerHandlers() {
 	http.HandleFunc("/api/task", api.AddTaskHandler) 
 	http.HandleFunc("/api/nextdate", api.HandleNextDate) 
+	http.HandleFunc("/api/tasks", api.GetTasksHandler)
 	http.Handle("/", http.FileServer(http.Dir("./web"))) 
 }
 
