@@ -26,9 +26,22 @@ func main() {
 
 // 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers() {
-	http.HandleFunc("/api/task", api.AddTaskHandler) 
-	http.HandleFunc("/api/nextdate", api.HandleNextDate) 
+	// Добавление задачи (POST)
+	http.HandleFunc("/api/task", api.AddTaskHandler) // Для добавления новой задачи (по примеру твоего предыдущего кода)
+
+	// Получение задач (GET)
+	http.HandleFunc("/api/task", api.GetTaskHandler) // Для получения задачи по ID (GET запрос)
+
+	// Обновление задачи (PUT)
+	http.HandleFunc("/api/task", api.UpdateTaskHandler) // Для обновления задачи (PUT запрос)
+
+	// Обработчик для следующих запросов (например, обработка даты)
+	http.HandleFunc("/api/nextdate", api.HandleNextDate)
+
+	// Получение всех задач (GET)
 	http.HandleFunc("/api/tasks", api.GetTasksHandler)
+
+	// Для отдачи статики (веб-страницы)
 	http.Handle("/", http.FileServer(http.Dir("./web"))) 
 }
 
