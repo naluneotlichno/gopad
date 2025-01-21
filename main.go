@@ -22,12 +22,12 @@ func main() {
 	r := chi.NewRouter()
 
 	// ✅ Регистрация хендлеров
-	registerHandlers()
+	registerHandlers(r)
 
 	// ✅ Подключение файлов /web
 	webDir := "./web"
 	fileServer := http.FileServer(http.Dir(webDir))
-	r.Mount("/", fileServer)
+	r.Mount("/*", fileServer)
 
 	// ✅ Запуск сервера
 	startServer()
@@ -35,21 +35,14 @@ func main() {
 
 // 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers(r *chi.Mux) {
-	// Добавление задачи (POST)
-	r.HandleFunc("/api/task", api.AddTaskHandler) // Для добавления новой задачи (по примеру твоего предыдущего кода)
+	r.Post("/api/task", api.AddTaskHandler) // +
+	r.Get("/api/task", api.GetTaskHandler) 
+	r.Put("/api/task", api.UpdateTaskHandler) 
+	r.Get("/api/nextdate", api.HandleNextDate) // +
+	r.Get("/api/tasks", api.GetTasksHandler)
 
-	// Получение задач (GET)
-	r.HandleFunc("/api/task", api.GetTaskHandler) // Для получения задачи по ID (GET запрос)
-
-	// Обновление задачи (PUT)
-	r.HandleFunc("/api/task", api.UpdateTaskHandler) // Для обновления задачи (PUT запрос)
-
-	// Обработчик для следующих запросов (например, обработка даты)
-	r.HandleFunc("/api/nextdate", api.HandleNextDate)
-
-	// Получение всех задач (GET)
-	r.HandleFunc("/api/tasks", api.GetTasksHandler)
-
+	r.Delete("/api/task", api.DeleteTaskHandler)
+	r.Post("/api/task/done", api.DoneTaskHandler)
 }
 
 // 🔥 startServer запускает сервер
