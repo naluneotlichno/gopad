@@ -15,7 +15,6 @@ import (
 )
 
 // DoneTaskHandler обрабатывает POST /api/task/done?id=...
-// DoneTaskHandler обрабатывает POST /api/task/done?id=...
 func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("🔥 [DoneTaskHandler] Запрос на /api/task/done получен...")
 
