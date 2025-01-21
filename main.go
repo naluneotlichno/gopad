@@ -27,7 +27,7 @@ func main() {
 	// ✅ Подключение файлов /web
 	webDir := "./web"
 	fileServer := http.FileServer(http.Dir(webDir))
-	r.Mount("/*", fileServer)
+	r.Handle("/*", fileServer)
 
 	// ✅ Запуск сервера
 	startServer()
@@ -35,14 +35,12 @@ func main() {
 
 // 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers(r *chi.Mux) {
-	r.Post("/api/task", api.AddTaskHandler) // +
+	r.Post("/api/task", api.AddTaskHandler) 
 	r.Get("/api/task", api.GetTaskHandler) 
 	r.Put("/api/task", api.UpdateTaskHandler) 
-	r.Get("/api/nextdate", api.HandleNextDate) // +
-	r.Get("/api/tasks", api.GetTasksHandler)
-
 	r.Delete("/api/task", api.DeleteTaskHandler)
 	r.Post("/api/task/done", api.DoneTaskHandler)
+	r.Get("/api/nextdate", api.HandleNextDate) 
 }
 
 // 🔥 startServer запускает сервер

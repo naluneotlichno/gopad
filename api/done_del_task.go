@@ -15,6 +15,7 @@ import (
 )
 
 // DoneTaskHandler обрабатывает POST /api/task/done?id=...
+// DoneTaskHandler обрабатывает POST /api/task/done?id=...
 func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("🔥 [DoneTaskHandler] Запрос на /api/task/done получен...")
 
@@ -26,7 +27,6 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("🔍 [DoneTaskHandler] Пытаемся найти задачу с ID=%s\n", id)
 	task, err := getTaskByID(id)
 	if err != nil {
 		log.Printf("🚨 [DoneTaskHandler] Ошибка получения задачи: %v\n", err)
@@ -47,7 +47,6 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("🔍 [DoneTaskHandler] repeat не пустой: %s. Начинаем вычисление новой даты\n", task.Repeat)
 	oldDate, err := time.Parse("20060102", task.Date)
 	if err != nil {
 		log.Printf("🚨 [DoneTaskHandler] Ошибка парсинга даты задачи (%s): %v\n", task.Date, err)
@@ -59,12 +58,11 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 	newDate, err := NextDateAdapter(oldDate, task.Repeat)
 	if err != nil {
 		log.Printf("🚨 [DoneTaskHandler] Ошибка при расчёте новой даты: %v\n", err)
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Некорректное правило повторения"})
 		return
 	}
 	log.Printf("✅ [DoneTaskHandler] Новая дата задачи: %s\n", newDate.Format("20060102"))
 
-	log.Printf("🔍 [DoneTaskHandler] Обновляем дату задачи ID=%s в базе данных\n", id)
 	if err := updateTaskDate(id, newDate.Format("20060102")); err != nil {
 		log.Printf("🚨 [DoneTaskHandler] Ошибка при обновлении даты задачи ID=%s: %v\n", id, err)
 		jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -74,6 +72,17 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, http.StatusOK, map[string]any{})
 }
+
+func jsonResponse(w http.ResponseWriter, status int, payload interface{}) {
+	log.Printf("📤 [jsonResponse] Отправляем ответ: статус=%d, payload=%#v\n", status, payload)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		log.Printf("🚨 [jsonResponse] Ошибка кодирования JSON: %v\n", err)
+		http.Error(w, `{"error":"Ошибка генерации ответа"}`, http.StatusInternalServerError)
+	}
+}
+
 
 // DeleteTaskHandler обрабатывает DELETE /api/task?id=...
 func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -119,10 +128,6 @@ func NextDateAdapter(oldDate time.Time, repeat string) (time.Time, error) {
 	log.Printf("✅ [NextDateAdapter] Новая дата: %s\n", newDate.Format("20060102"))
 	return newDate, nil
 }
-
-// ----------------------------------------------------------------------
-// Вспомогательные функции
-// ----------------------------------------------------------------------
 
 func getTaskByID(id string) (Task, error) {
 	log.Printf("🔍 [getTaskByID] Получаем задачу ID=%s из базы данных\n", id)
@@ -210,14 +215,4 @@ func updateTaskDate(id, newDate string) error {
 	}
 	log.Printf("✅ [updateTaskDate] Дата задачи ID=%s успешно обновлена\n", id)
 	return nil
-}
-
-func jsonResponse(w http.ResponseWriter, status int, payload interface{}) {
-	log.Printf("📤 [jsonResponse] Отправляем ответ: статус=%d, payload=%#v\n", status, payload)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		log.Printf("🚨 [jsonResponse] Ошибка кодирования JSON: %v\n", err)
-		http.Error(w, `{"error":"Ошибка генерации ответа"}`, http.StatusInternalServerError)
-	}
 }
