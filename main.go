@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/naluneotlichno/FP-GO-API/api"
 	"github.com/naluneotlichno/FP-GO-API/database"
 )
@@ -17,37 +18,38 @@ func main() {
 		log.Fatalf("❌ Ошибка инициализации БД: %v", err)
 	}
 
+	// ✅ Создание маршрутизатора
+	r := chi.NewRouter()
+
 	// ✅ Регистрация хендлеров
 	registerHandlers()
+
+	// ✅ Подключение файлов /web
+	webDir := "./web"
+	fileServer := http.FileServer(http.Dir(webDir))
+	r.Mount("/", fileServer)
 
 	// ✅ Запуск сервера
 	startServer()
 }
 
 // 🔥 registerHandlers регистрирует все хендлеры
-func registerHandlers() {
-	// Один маршрут /api/task, но разные методы внутри
-	http.HandleFunc("/api/task", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		// Обработка добавления задачи (POST)
-		case http.MethodPost:
-			api.AddTaskHandler(w, r)
-		// Получение задачи по ID (GET)
-		case http.MethodGet:
-			api.GetTaskHandler(w, r)
-		// Обновление задачи (PUT)
-		case http.MethodPut:
-			api.UpdateTaskHandler(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
+func registerHandlers(r *chi.Mux) {
+	// Добавление задачи (POST)
+	r.HandleFunc("/api/task", api.AddTaskHandler) // Для добавления новой задачи (по примеру твоего предыдущего кода)
+
+	// Получение задач (GET)
+	r.HandleFunc("/api/task", api.GetTaskHandler) // Для получения задачи по ID (GET запрос)
+
+	// Обновление задачи (PUT)
+	r.HandleFunc("/api/task", api.UpdateTaskHandler) // Для обновления задачи (PUT запрос)
+
+	// Обработчик для следующих запросов (например, обработка даты)
+	r.HandleFunc("/api/nextdate", api.HandleNextDate)
 
 	// Получение всех задач (GET)
-	http.HandleFunc("/api/tasks", api.GetTasksHandler)
+	r.HandleFunc("/api/tasks", api.GetTasksHandler)
 
-	// Для отдачи статики (веб-страницы)
-	http.Handle("/", http.FileServer(http.Dir("./web"))) 
 }
 
 // 🔥 startServer запускает сервер
