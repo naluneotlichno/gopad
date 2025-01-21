@@ -9,6 +9,7 @@ import (
     "strconv"
     "strings"
     "time"
+    "encoding/json"
 
     "github.com/naluneotlichno/FP-GO-API/database"
 )
@@ -41,7 +42,9 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
         log.Printf("⚠️ [DoneTaskHandler] repeat пустой, удаляем задачу id=%s\n", id)
         if err := deleteTaskByID(id); err != nil {
             log.Printf("🚨 [DoneTaskHandler] Ошибка при удалении задачи: %v\n", err)
-            http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+            response := map[string]string{"error": err.Error()}
+            w.Header().Set("Content-Type", "application/json")
+            json.NewEncoder(w).Encode(response)
             return
         }
         log.Println("✅ [DoneTaskHandler] Задача успешно удалена, отправляем {}")
@@ -97,7 +100,9 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 
     if err := deleteTaskByID(id); err != nil {
         log.Printf("🚨 [DeleteTaskHandler] Ошибка удаления задачи: %v\n", err)
-        http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+        response := map[string]string{"error": err.Error()}
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(response)
         return
     }
     log.Println("✅ [DeleteTaskHandler] Задача успешно удалена, отправляем {}")
