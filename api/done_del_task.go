@@ -2,6 +2,7 @@ package api
 
 import (
     "database/sql"
+    "encoding/json"
     "errors"
     "fmt"
     "log"
@@ -9,7 +10,6 @@ import (
     "strconv"
     "strings"
     "time"
-    "encoding/json"
 
     "github.com/naluneotlichno/FP-GO-API/database"
 )
@@ -67,7 +67,9 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
     newDate, err := NextDateAdapter(oldDate, task.Repeat)
     if err != nil {
         log.Printf("🚨 [DoneTaskHandler] Ошибка NextDateAdapter: %v\n", err)
-        http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+        response := map[string]string{"error": err.Error()}
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(response)
         return
     }
     log.Printf("✅ [DoneTaskHandler] Новая дата задачи: %s\n", newDate.Format("20060102"))
@@ -75,7 +77,9 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
     // Обновляем задачу в БД
     if err := updateTaskDate(id, newDate.Format("20060102")); err != nil {
         log.Printf("🚨 [DoneTaskHandler] Ошибка обновления даты задачи: %v\n", err)
-        http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+        response := map[string]string{"error": err.Error()}
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(response)
         return
     }
     log.Println("✅ [DoneTaskHandler] Дата задачи успешно обновлена!")
@@ -114,23 +118,25 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 // NextDateAdapter — переходник между твоей NextDate(now, date, repeat) и тем,
 // что ожидают тесты (просто time.Time на выход).
 func NextDateAdapter(oldDate time.Time, repeat string) (time.Time, error) {
-    log.Println("🔍 [NextDateAdapter] Адаптируем вызов твоей NextDate(...).")
+    log.Println("🔍 [NextDateAdapter] Адаптируем вызов твоей NextDate(...)")
 
-    // Превращаем oldDate в строку, как требует твоя функция
+    // Превращаем oldDate в строку
     oldDateStr := oldDate.Format("20060102")
 
     // Вызываем твою старую функцию
     newDateStr, err := NextDate(oldDate, oldDateStr, repeat)
     if err != nil {
-        log.Printf("🚨 [NextDateAdapter] Ошибка в твоей NextDate: %v\n", err)
-        return time.Time{}, err
+        log.Printf("🚨 [NextDateAdapter] Ошибка в NextDate: %v\n", err)
+        return time.Time{}, fmt.Errorf("ошибка вычисления новой даты: %w", err)
     }
 
+    // Парсим строку даты
     parsed, err := time.Parse("20060102", newDateStr)
     if err != nil {
         log.Printf("🚨 [NextDateAdapter] Ошибка парсинга '%s': %v\n", newDateStr, err)
-        return time.Time{}, fmt.Errorf("Ошибка парсинга даты '%s': %w", newDateStr, err)
+        return time.Time{}, fmt.Errorf("ошибка парсинга даты '%s': %w", newDateStr, err)
     }
+
     log.Printf("✅ [NextDateAdapter] Итоговая дата: %s\n", parsed.Format("20060102"))
     return parsed, nil
 }
@@ -142,17 +148,17 @@ func NextDateAdapter(oldDate time.Time, repeat string) (time.Time, error) {
 // getTaskByID читает задачу по ID из таблицы scheduler.
 func getTaskByID(id string) (Task, error) {
     log.Println("🔍 [getTaskByID] Подключаемся к БД...")
-    db, err := database.GetDB() // Если возвращает (db *sql.DB, err error)
+    db, err := database.GetDB()
     if err != nil {
         log.Printf("🚨 [getTaskByID] Ошибка получения DB: %v\n", err)
-        return Task{}, errors.New("Ошибка подключения к БД")
+        return Task{}, errors.New("ошибка подключения к БД")
     }
 
     log.Printf("🔍 [getTaskByID] Парсим id='%s' в int...\n", id)
     idInt, err := strconv.ParseInt(id, 10, 64)
     if err != nil {
         log.Printf("🚨 [getTaskByID] Невалидный ID='%s': %v\n", id, err)
-        return Task{}, errors.New("Задача не найдена")
+        return Task{}, errors.New("задача не найдена")
     }
 
     var t Task
@@ -162,7 +168,7 @@ func getTaskByID(id string) (Task, error) {
     if err != nil {
         if err == sql.ErrNoRows {
             log.Println("🚨 [getTaskByID] Запись не найдена")
-            return Task{}, errors.New("Задача не найдена")
+            return Task{}, errors.New("задача не найдена")
         }
         log.Printf("🚨 [getTaskByID] Ошибка запроса: %v\n", err)
         return Task{}, err
@@ -178,14 +184,14 @@ func deleteTaskByID(id string) error {
     db, err := database.GetDB()
     if err != nil {
         log.Printf("🚨 [deleteTaskByID] Ошибка получения DB: %v\n", err)
-        return errors.New("Ошибка подключения к БД")
+        return errors.New("ошибка подключения к БД")
     }
 
     log.Printf("🔍 [deleteTaskByID] Парсим id='%s' в int...\n", id)
     idInt, err := strconv.ParseInt(id, 10, 64)
     if err != nil {
         log.Printf("🚨 [deleteTaskByID] Невалидный ID='%s': %v\n", id, err)
-        return errors.New("Задача не найдена")
+        return errors.New("задача не найдена")
     }
 
     log.Println("🔍 [deleteTaskByID] Выполняем DELETE FROM scheduler WHERE id=?")
@@ -198,7 +204,7 @@ func deleteTaskByID(id string) error {
     n, _ := res.RowsAffected()
     if n == 0 {
         log.Println("🚨 [deleteTaskByID] Строка не найдена, нечего удалять")
-        return errors.New("Задача не найдена")
+        return errors.New("задача не найдена")
     }
     log.Println("✅ [deleteTaskByID] Задача успешно удалена!")
     return nil
@@ -210,14 +216,14 @@ func updateTaskDate(id, newDate string) error {
     db, err := database.GetDB()
     if err != nil {
         log.Printf("🚨 [updateTaskDate] Ошибка получения DB: %v\n", err)
-        return errors.New("Ошибка подключения к БД")
+        return errors.New("ошибка подключения к БД")
     }
 
     log.Printf("🔍 [updateTaskDate] Парсим id='%s' в int...\n", id)
     idInt, err := strconv.ParseInt(id, 10, 64)
     if err != nil {
         log.Printf("🚨 [updateTaskDate] Невалидный ID='%s': %v\n", id, err)
-        return errors.New("Неверный ID")
+        return errors.New("неверный ID")
     }
 
     log.Printf("🔍 [updateTaskDate] UPDATE scheduler SET date='%s' WHERE id=%d\n", newDate, idInt)
@@ -230,7 +236,7 @@ func updateTaskDate(id, newDate string) error {
     n, _ := res.RowsAffected()
     if n == 0 {
         log.Println("🚨 [updateTaskDate] Не найдена строка с таким id")
-        return errors.New("Задача не найдена")
+        return errors.New("задача не найдена")
     }
     log.Println("✅ [updateTaskDate] Дата задачи успешно обновлена!")
     return nil
