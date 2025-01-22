@@ -30,7 +30,7 @@ func main() {
 	r.Handle("/*", fileServer)
 
 	// ✅ Запуск сервера
-	startServer()
+	startServer(r)
 }
 
 // 🔥 registerHandlers регистрирует все хендлеры
@@ -44,14 +44,14 @@ func registerHandlers(r *chi.Mux) {
 }
 
 // 🔥 startServer запускает сервер
-func startServer() {
+func startServer(r *chi.Mux) {
 	port := os.Getenv("TODO_PORT")
 	if port == "" {
 		port = "7540"
 	}
 
 	log.Printf("✅ 🚀 Сервер выезжает на порт %s. Подрубаемся!", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatalf("❌ Ой-ой, сервер упал: %v", err)
 	}
 }
