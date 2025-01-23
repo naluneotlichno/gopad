@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -26,7 +27,7 @@ func HandleNextDate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ✅ Вызываем функцию NextDate
-	nextDate, err := NextDate(now, dateStr, repeat)
+	nextDate, err := NextDate(now, dateStr, repeat, "nextdate")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Ошибка расчета следующей даты: %s", err.Error()), http.StatusBadRequest)
 		return
@@ -39,72 +40,67 @@ func HandleNextDate(w http.ResponseWriter, r *http.Request) {
 
 // NextDate вычисляет следующую дату задачи на основе правила повторения.
 // Возвращает дату в формате `20060102` (YYYYMMDD) или ошибку, если правило некорректно.
-func NextDate(now time.Time, dateStr string, repeat string) (string, error) {
-	// Парсим входную дату
+func NextDate(now time.Time, dateStr string, repeat string, status string) (string, error) {
+	
+	if dateStr == "" {
+		return "", fmt.Errorf("дата не задана")
+	}
+
 	parsedDate, err := time.Parse("20060102", dateStr)
 	if err != nil {
-		// Если парсинг не удался, тесты ждут "пустой" (ошибку → пустой ответ)
 		return "", fmt.Errorf("ошибка парсинга")
 	}
 
-	// Если repeat пустой, тест тоже ждёт "", значит ошибка
 	if repeat == "" {
+		if parsedDate.After(now) {
+			return parsedDate.Format("20060102"), nil
+		}
 		return "", fmt.Errorf("правило повторения не задано")
 	}
 
-	// 1) Если repeat = "y" (ежегодное повторение)
 	if repeat == "y" {
-		// Будем прибавлять год, пока дата не станет строго больше now
-		nextDate := parsedDate
-
-		// Если parsedDate <= now, крутим год, пока не уйдём за now
-		for !nextDate.After(now) {
-			nextDate = addYearFixLeap(parsedDate, nextDate)
-		}
-		// Если parsedDate > now, делаем одну итерацию
-		if parsedDate.After(now) && nextDate == parsedDate {
-			nextDate = addYearFixLeap(parsedDate, nextDate)
+		nextDate := parsedDate.AddDate(1, 0, 0)
+		if parsedDate.Month() == time.February && parsedDate.Day() == 29 {
+			if nextDate.Month() != time.February || nextDate.Day() != 29 {
+				nextDate = time.Date(nextDate.Year(), time.March, 1, 0, 0, 0, 0, nextDate.Location())
+			}
 		}
 
+		if nextDate.Before(now) {
+			for !nextDate.After(now) {
+				nextDate = nextDate.AddDate(1, 0, 0)
+			}
+		}	
 		return nextDate.Format("20060102"), nil
 	}
 
-	// 2) Если repeat = "d N" (повтор через N дней)
 	if strings.HasPrefix(repeat, "d ") {
-		parts := strings.Split(repeat, " ")
-		if len(parts) != 2 {
-			return "", fmt.Errorf("формат d N некорректен")
-		}
-		days, err := strconv.Atoi(parts[1])
+		daysStr := strings.TrimPrefix(repeat, "d ")
+		days, err := strconv.Atoi(daysStr)
+
 		if err != nil || days < 1 || days > 400 {
-			// ✅ ВАЖНО: тест ожидает ошибку, если days вне допустимого диапазона
-			return "", fmt.Errorf("некорректное число дней '%s'", parts[1])
+			return "", fmt.Errorf("некорректный формат повторения")
 		}
 
-		nextDate := parsedDate
-		// Если parsedDate <= now, прибавляем +days, пока не вылезем за now
-		for !nextDate.After(now) {
-			nextDate = nextDate.AddDate(0, 0, days)
+		if status != "done" {
+			if isSameDate(parsedDate, now) {
+				return parsedDate.Format("20060102"), nil
+			}
 		}
-		// Если parsedDate > now и мы всё ещё на исходной дате, делаем 1 итерацию
-		if parsedDate.After(now) && nextDate == parsedDate {
+
+		nextDate := parsedDate.AddDate(0, 0, days)	
+
+		for !nextDate.After(now) {
 			nextDate = nextDate.AddDate(0, 0, days)
 		}
 
 		return nextDate.Format("20060102"), nil
 	}
 
-	// 3) Если какие-то другие форматы (w ..., m ...), это уже другая логика
-	return "", fmt.Errorf("неподдерживаемый repeat: %s", repeat)
+	return "", errors.New("неподдерживаемый формат повторения")
 }
 
-// addYearFixLeap прибавляет ровно 1 год к currentDate, учитывая "скачок" с 29.02 на 01.03:
-func addYearFixLeap(originalDate, currentDate time.Time) time.Time {
-	next := currentDate.AddDate(1, 0, 0)
-	// Если исходная дата была 29.02, а Go сдвинул на 28.02, то правим на 01.03
-	if originalDate.Month() == time.February && originalDate.Day() == 29 &&
-		next.Month() == time.February && next.Day() == 28 {
-		return time.Date(next.Year(), time.March, 1, 0, 0, 0, 0, next.Location())
-	}
-	return next
+func isSameDate(a, b time.Time) bool {
+	return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
 }
+

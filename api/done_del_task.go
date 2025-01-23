@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,56 +17,57 @@ import (
 func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("🔥 [DoneTaskHandler] Запрос на /api/task/done получен...")
 
-	id := r.URL.Query().Get("id")
-	log.Printf("🔍 [DoneTaskHandler] ID из запроса: %s\n", id)
-	if id == "" {
+	idStr := r.URL.Query().Get("id")
+	log.Printf("🔍 [DoneTaskHandler] ID из запроса: %s\n", idStr)
+	if idStr == "" {
 		log.Println("🚨 [DoneTaskHandler] ID не указан")
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Не указан идентификатор"})
 		return
 	}
 
-	task, err := getTaskByID(id)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		log.Printf("🚨 [DoneTaskHandler] Ошибка получения задачи: %v\n", err)
-		jsonResponse(w, http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+		log.Printf("🚨 [DoneTaskHandler] Ошибка парсинга ID=%s: %v\n", id, err)
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор"})
 		return
 	}
-	log.Printf("✅ [DoneTaskHandler] Найдена задача: %#v\n", task)
 
-	if strings.TrimSpace(task.Repeat) == "" {
-		log.Printf("🔍 [DoneTaskHandler] repeat пустой. Удаляем задачу ID=%s\n", id)
-		if err := deleteTaskByID(id); err != nil {
-			log.Printf("🚨 [DoneTaskHandler] Ошибка при удалении задачи ID=%s: %v\n", id, err)
-			jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	task, err := database.GetTaskByID(id)
+	if err != nil {
+		if errors.Is(err, database.ErrTask) {
+			jsonResponse(w, http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
 			return
 		}
-		log.Printf("✅ [DoneTaskHandler] Задача ID=%s успешно удалена\n", id)
-		jsonResponse(w, http.StatusOK, map[string]any{})
+		log.Printf("🚨 [DoneTaskHandler] Ошибка получения задачи ID=%s: %v\n", id, err)
+		jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задачи"})
 		return
 	}
 
-	oldDate, err := time.Parse("20060102", task.Date)
-	if err != nil {
-		log.Printf("🚨 [DoneTaskHandler] Ошибка парсинга даты задачи (%s): %v\n", task.Date, err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Некорректная дата задачи"})
-		return
-	}
-	log.Printf("✅ [DoneTaskHandler] Текущая дата задачи: %s\n", oldDate.Format("20060102"))
+	log.Printf("✅ [DoneTaskHandler] Найдена задача: %#v\n", task)
 
-	newDate, err := NextDateAdapter(oldDate, task.Repeat)
-	if err != nil {
-		log.Printf("🚨 [DoneTaskHandler] Ошибка при расчёте новой даты: %v\n", err)
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Некорректное правило повторения"})
-		return
-	}
-	log.Printf("✅ [DoneTaskHandler] Новая дата задачи: %s\n", newDate.Format("20060102"))
+	if task.Repeat == "" {
+		log.Printf("🔍 [DoneTaskHandler] repeat пустой. Удаляем задачу ID=%s\n", id)
+		if err := database.DeleteTask(id); err != nil {
+			log.Printf("🚨 [DoneTaskHandler] Ошибка при удалении задачи ID=%s: %v\n", id, err)
+			jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении задачи"})
+			return
+		}
+	} else {
+		now := time.Now()
+		nextDate, err := NextDate(now, task.Date, task.Repeat, "done")
+		if err != nil {
+			log.Printf("🚨 [DoneTaskHandler] Ошибка вычисления следующей даты: %v\n", err)
+			jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка при вычислении следующей даты"})
+			return
+		}
 
-	if err := updateTaskDate(id, newDate.Format("20060102")); err != nil {
-		log.Printf("🚨 [DoneTaskHandler] Ошибка при обновлении даты задачи ID=%s: %v\n", id, err)
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
+		task.Date = nextDate
+		err = database.UpdateTask(task)
+		if err != nil {
+			jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении задачи"})
+			return
+		}
 	}
-	log.Printf("✅ [DoneTaskHandler] Дата задачи ID=%s успешно обновлена\n", id)
 
 	jsonResponse(w, http.StatusOK, map[string]any{})
 }
@@ -79,13 +79,12 @@ func jsonResponse(w http.ResponseWriter, status int, payload interface{}) {
 	json.NewEncoder(w).Encode(payload)
 }
 
-
 // DeleteTaskHandler обрабатывает DELETE /api/task?id=...
 func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("🔥 [DeleteTaskHandler] Запрос на DELETE /api/task получен...")
 
 	idStr := r.URL.Query().Get("id")
-	log.Printf("🔍 [DeleteTaskHandler] ID из запроса: %s\n", id)
+	log.Printf("🔍 [DeleteTaskHandler] ID из запроса: %s\n", idStr)
 	if idStr == "" {
 		log.Println("🚨 [DeleteTaskHandler] ID не указан")
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Не указан идентификатор"})
@@ -100,7 +99,7 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("🔍 [DeleteTaskHandler] Пытаемся удалить задачу с ID=%s\n", id)
-	if err := database.deleteTask(id); err != nil {
+	if err := database.DeleteTask(id); err != nil {
 		if errors.Is(err, fmt.Errorf("задача не найдена")) {
 			jsonResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
@@ -109,7 +108,7 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
-	
+
 	log.Printf("✅ [DeleteTaskHandler] Задача ID=%s успешно удалена\n", id)
 	jsonResponse(w, http.StatusOK, map[string]interface{}{})
 }
@@ -135,4 +134,3 @@ func NextDateAdapter(oldDate time.Time, repeat string) (time.Time, error) {
 	log.Printf("✅ [NextDateAdapter] Новая дата: %s\n", newDate.Format("20060102"))
 	return newDate, nil
 }
-

@@ -7,13 +7,23 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/naluneotlichno/FP-GO-API/api"
 )
 
 var db *sql.DB
+var ErrTask = fmt.Errorf("задача не найдена")
+
+type Task struct {
+	ID      int64  `json:"id"`
+	Date    string `json:"date"`
+	Title   string `json:"title"`
+	Comment string `json:"comment"`
+	Repeat  string `json:"repeat"`
+}
 
 func GetDBPath() string {
 	// Получаем путь к корневой директории проекта
@@ -75,90 +85,71 @@ func GetDB() (*sql.DB, error) {
 	return db, nil
 }
 
-func deleteTask(id int64) error {
+func DeleteTask(id int64) error {
 
-	res, err := db.Exec(`DELETE FROM scheduler WHERE id=?`, idInt)
+	res, err := db.Exec(`DELETE FROM scheduler WHERE id=?`, id)
 	if err != nil {
 		log.Printf("🚨 [deleteTaskByID] Ошибка выполнения DELETE: %v\n", err)
 		return err
 	}
 
-	db, err := GetDB()
+	n, err := res.RowsAffected()
 	if err != nil {
-		log.Printf("🚨 [deleteTaskByID] Ошибка подключения к базе: %v\n", err)
-		return errors.New("ошибка подключения к БД")
-	}
-
-	idInt, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		log.Printf("🚨 [deleteTaskByID] Невалидный ID=%s: %v\n", id, err)
-		return errors.New("задача не найдена")
-	}
-
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		log.Printf("🚨 [deleteTaskByID] Задача ID=%s не найдена\n", id)
-		return errors.New("задача не найдена")
-	}
-	log.Printf("✅ [deleteTaskByID] Задача ID=%s успешно удалена\n", id)
-	return nil
-}
-
-func updateTaskDate(id, newDate string) error {
-	log.Printf("🔍 [updateTaskDate] Обновляем дату задачи ID=%s на %s\n", id, newDate)
-	db, err := database.GetDB()
-	if err != nil {
-		log.Printf("🚨 [updateTaskDate] Ошибка подключения к базе: %v\n", err)
-		return errors.New("ошибка подключения к БД")
-	}
-
-	idInt, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		log.Printf("🚨 [updateTaskDate] Невалидный ID=%s: %v\n", id, err)
-		return errors.New("задача не найдена")
-	}
-
-	res, err := db.Exec(`UPDATE scheduler SET date=? WHERE id=?`, newDate, idInt)
-	if err != nil {
-		log.Printf("🚨 [updateTaskDate] Ошибка выполнения UPDATE: %v\n", err)
+		log.Printf("🚨 [deleteTaskByID] Ошибка при получении количества затронутых строк: %v\n", err)
 		return err
 	}
 
-	n, _ := res.RowsAffected()
 	if n == 0 {
-		log.Printf("🚨 [updateTaskDate] Задача ID=%s не найдена для обновления\n", id)
+		log.Printf("🚨 [deleteTaskByID] Задача ID=%d не найдена\n", id)
 		return errors.New("задача не найдена")
 	}
-	log.Printf("✅ [updateTaskDate] Дата задачи ID=%s успешно обновлена\n", id)
+
+	log.Printf("✅ [deleteTaskByID] Задача ID=%d успешно удалена\n", id)
 	return nil
 }
 
-func getTaskByID(id string) (Task, error) {
-	log.Printf("🔍 [getTaskByID] Получаем задачу ID=%s из базы данных\n", id)
-	db, err := database.GetDB()
+func UpdateTask(task Task) error {
+	_, err := api.NextDate(time.Now(), task.Date, task.Repeat, "check")
 	if err != nil {
-		log.Printf("🚨 [getTaskByID] Ошибка подключения к базе: %v\n", err)
-		return Task{}, errors.New("ошибка подключения к БД")
+		return fmt.Errorf("ошибка при вычислении следующей даты: %w", err)
 	}
 
-	idInt, err := strconv.ParseInt(id, 10, 64)
+	query := `
+		UPDATE scheduler
+		SET date = ?, title = ?, comment = ?, repeat = ?
+		WHERE id = ?
+	`
+
+	res, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, task.ID)
 	if err != nil {
-		log.Printf("🚨 [getTaskByID] Невалидный ID=%s: %v\n", id, err)
-		return Task{}, errors.New("задача не найдена")
+		return fmt.Errorf("ошибка при обновлении задачи: %w", err)
 	}
 
-	var t Task
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка при получении количества затронутых строк: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("задача не найдена")
+	}
+
+	return nil
+}
+
+func GetTaskByID(id int64) (Task, error) {
+	var task Task
 	log.Println("🔍 [getTaskByID] Выполняем SELECT...")
-	row := db.QueryRow(`SELECT id, date, title, comment, repeat FROM scheduler WHERE id=?`, idInt)
-	err = row.Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat)
+	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE id=?`
+	err := db.QueryRow(query, id).Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			log.Printf("🚨 [getTaskByID] Задача ID=%s не найдена\n", id)
 			return Task{}, errors.New("задача не найдена")
 		}
 		log.Printf("🚨 [getTaskByID] Ошибка выполнения запроса: %v\n", err)
 		return Task{}, err
 	}
-	log.Printf("✅ [getTaskByID] Найдена задача: %#v\n", t)
-	return t, nil
+	log.Printf("✅ [getTaskByID] Найдена задача: %#v\n", task)
+	return task, nil
 }
