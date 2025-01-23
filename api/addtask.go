@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/naluneotlichno/FP-GO-API/nextdate"
 	"github.com/naluneotlichno/FP-GO-API/database"
+	"github.com/naluneotlichno/FP-GO-API/nextdate"
 )
 
 // Те же имена структур, что в "КОД 1"
@@ -112,7 +112,7 @@ type TaskResponseItem struct {
 	Repeat  string `json:"repeat"`
 }
 
-type TasksResponse struct {
+type TasksR struct {
 	Tasks []TaskResponseItem `json:"tasks"`
 }
 
@@ -128,7 +128,7 @@ func Tasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := TasksResponse{Tasks: []TaskResponseItem{}}
+	response := TasksR{Tasks: []TaskResponseItem{}}
 
 	for _, t := range tasks {
 		taskItem := TaskResponseItem{
@@ -143,4 +143,3 @@ func Tasks(w http.ResponseWriter, r *http.Request) {
 
 	JsonResponse(w, http.StatusOK, response)
 }
-
