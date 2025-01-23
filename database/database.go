@@ -109,7 +109,7 @@ func DeleteTask(id int64) error {
 }
 
 func UpdateTask(task Task) error {
-	_, err := api.NextDate(time.Now(), task.Date, task.Repeat, "check")
+	_, err := nextdate.NextDate(time.Now(), task.Date, task.Repeat, "check")
 	if err != nil {
 		return fmt.Errorf("ошибка при вычислении следующей даты: %w", err)
 	}

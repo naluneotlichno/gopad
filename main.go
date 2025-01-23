@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/naluneotlichno/FP-GO-API/api"
 	"github.com/naluneotlichno/FP-GO-API/database"
+	"github.com/naluneotlichno/FP-GO-API/nextdate"
 )
 
 func main() {
@@ -35,7 +36,7 @@ func main() {
 
 // 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers(r *chi.Mux) {
-	r.Get("/api/nextdate", api.HandleNextDate) // +
+	r.Get("/api/nextdate", nextdate.HandleNextDate) // +
 	r.Post("/api/task", api.AddTaskHandler)	// +
 	r.Get("/api/tasks", api.GetTaskHandler)
 	r.Put("/api/task", api.UpdateTaskHandler)

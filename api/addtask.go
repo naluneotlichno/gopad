@@ -86,7 +86,7 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// Повторение есть => вызываем некую NextDate.
 			// Предположим, она у вас реализована аналогично «КОД 1»
-			nextDateStr, err := NextDate(now, req.Date, req.Repeat)
+			nextDateStr, err := nextdate.NextDate(now, req.Date, req.Repeat)
 			if err != nil {
 				respondWithJSON(w, http.StatusBadRequest, AddTaskResponse{Error: "неверное правило повторения"})
 				return

@@ -55,7 +55,7 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		now := time.Now()
-		nextDate, err := NextDate(now, task.Date, task.Repeat, "done")
+		nextDate, err := nextdate.NextDate(now, task.Date, task.Repeat, "done")
 		if err != nil {
 			log.Printf("🚨 [DoneTaskHandler] Ошибка вычисления следующей даты: %v\n", err)
 			jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка при вычислении следующей даты"})
