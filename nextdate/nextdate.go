@@ -58,22 +58,6 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 		return "", fmt.Errorf("правило повторения не задано")
 	}
 
-	if repeat == "y" {
-		nextDate := parsedDate.AddDate(1, 0, 0)
-		if parsedDate.Month() == time.February && parsedDate.Day() == 29 {
-			if nextDate.Month() != time.February || nextDate.Day() != 29 {
-				nextDate = time.Date(nextDate.Year(), time.March, 1, 0, 0, 0, 0, nextDate.Location())
-			}
-		}
-
-		if nextDate.Before(now) {
-			for !nextDate.After(now) {
-				nextDate = nextDate.AddDate(1, 0, 0)
-			}
-		}
-		return nextDate.Format("20060102"), nil
-	}
-
 	if strings.HasPrefix(repeat, "d ") {
 		daysStr := strings.TrimPrefix(repeat, "d ")
 		days, err := strconv.Atoi(daysStr)
@@ -94,6 +78,22 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 			nextDate = nextDate.AddDate(0, 0, days)
 		}
 
+		return nextDate.Format("20060102"), nil
+	}
+
+	if repeat == "y" {
+		nextDate := parsedDate.AddDate(1, 0, 0)
+		if parsedDate.Month() == time.February && parsedDate.Day() == 29 {
+			if nextDate.Month() != time.February || nextDate.Day() != 29 {
+				nextDate = time.Date(nextDate.Year(), time.March, 1, 0, 0, 0, 0, nextDate.Location())
+			}
+		}
+
+		if nextDate.Before(now) {
+			for !nextDate.After(now) {
+				nextDate = nextDate.AddDate(1, 0, 0)
+			}
+		}
 		return nextDate.Format("20060102"), nil
 	}
 

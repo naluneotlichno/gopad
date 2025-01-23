@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/naluneotlichno/FP-GO-API/database"
@@ -112,26 +111,4 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("✅ [DeleteTaskHandler] Задача ID=%s успешно удалена\n", id)
 	JsonResponse(w, http.StatusOK, map[string]interface{}{})
-}
-
-// NextDateAdapter — переходник между твоей NextDate(...) и тем, что ожидают тесты.
-func NextDateAdapter(oldDate time.Time, repeat string) (time.Time, error) {
-	log.Printf("🔍 [NextDateAdapter] Параметры: oldDate=%s, repeat=%s\n", oldDate.Format("20060102"), repeat)
-
-	repeatParts := strings.Split(repeat, " ")
-	if len(repeatParts) != 2 || repeatParts[0] != "d" {
-		err := fmt.Errorf("некорректный формат repeat: %s", repeat)
-		log.Printf("🚨 [NextDateAdapter] %v\n", err)
-		return time.Time{}, err
-	}
-
-	days, err := strconv.Atoi(repeatParts[1])
-	if err != nil {
-		log.Printf("🚨 [NextDateAdapter] Ошибка парсинга дней: %v\n", err)
-		return time.Time{}, err
-	}
-
-	newDate := oldDate.AddDate(0, 0, days)
-	log.Printf("✅ [NextDateAdapter] Новая дата: %s\n", newDate.Format("20060102"))
-	return newDate, nil
 }
