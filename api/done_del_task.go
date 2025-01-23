@@ -76,10 +76,7 @@ func jsonResponse(w http.ResponseWriter, status int, payload interface{}) {
 	log.Printf("📤 [jsonResponse] Отправляем ответ: статус=%d, payload=%#v\n", status, payload)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		log.Printf("🚨 [jsonResponse] Ошибка кодирования JSON: %v\n", err)
-		http.Error(w, `{"error":"Ошибка генерации ответа"}`, http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(payload)
 }
 
 
@@ -87,23 +84,34 @@ func jsonResponse(w http.ResponseWriter, status int, payload interface{}) {
 func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("🔥 [DeleteTaskHandler] Запрос на DELETE /api/task получен...")
 
-	id := r.URL.Query().Get("id")
+	idStr := r.URL.Query().Get("id")
 	log.Printf("🔍 [DeleteTaskHandler] ID из запроса: %s\n", id)
-	if id == "" {
+	if idStr == "" {
 		log.Println("🚨 [DeleteTaskHandler] ID не указан")
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Не указан идентификатор"})
 		return
 	}
 
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		log.Printf("🚨 [DeleteTaskHandler] Ошибка парсинга ID=%s: %v\n", id, err)
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор"})
+		return
+	}
+
 	log.Printf("🔍 [DeleteTaskHandler] Пытаемся удалить задачу с ID=%s\n", id)
-	if err := deleteTaskByID(id); err != nil {
+	if err := database.deleteTask(id); err != nil {
+		if errors.Is(err, fmt.Errorf("задача не найдена")) {
+			jsonResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+			return
+		}
 		log.Printf("🚨 [DeleteTaskHandler] Ошибка удаления задачи ID=%s: %v\n", id, err)
 		jsonResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
+	
 	log.Printf("✅ [DeleteTaskHandler] Задача ID=%s успешно удалена\n", id)
-
-	jsonResponse(w, http.StatusOK, map[string]any{})
+	jsonResponse(w, http.StatusOK, map[string]interface{}{})
 }
 
 // NextDateAdapter — переходник между твоей NextDate(...) и тем, что ожидают тесты.
@@ -128,90 +136,3 @@ func NextDateAdapter(oldDate time.Time, repeat string) (time.Time, error) {
 	return newDate, nil
 }
 
-func getTaskByID(id string) (Task, error) {
-	log.Printf("🔍 [getTaskByID] Получаем задачу ID=%s из базы данных\n", id)
-	db, err := database.GetDB()
-	if err != nil {
-		log.Printf("🚨 [getTaskByID] Ошибка подключения к базе: %v\n", err)
-		return Task{}, errors.New("ошибка подключения к БД")
-	}
-
-	idInt, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		log.Printf("🚨 [getTaskByID] Невалидный ID=%s: %v\n", id, err)
-		return Task{}, errors.New("задача не найдена")
-	}
-
-	var t Task
-	log.Println("🔍 [getTaskByID] Выполняем SELECT...")
-	row := db.QueryRow(`SELECT id, date, title, comment, repeat FROM scheduler WHERE id=?`, idInt)
-	err = row.Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			log.Printf("🚨 [getTaskByID] Задача ID=%s не найдена\n", id)
-			return Task{}, errors.New("задача не найдена")
-		}
-		log.Printf("🚨 [getTaskByID] Ошибка выполнения запроса: %v\n", err)
-		return Task{}, err
-	}
-	log.Printf("✅ [getTaskByID] Найдена задача: %#v\n", t)
-	return t, nil
-}
-
-func deleteTaskByID(id string) error {
-	log.Printf("🔍 [deleteTaskByID] Удаляем задачу ID=%s из базы данных\n", id)
-	db, err := database.GetDB()
-	if err != nil {
-		log.Printf("🚨 [deleteTaskByID] Ошибка подключения к базе: %v\n", err)
-		return errors.New("ошибка подключения к БД")
-	}
-
-	idInt, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		log.Printf("🚨 [deleteTaskByID] Невалидный ID=%s: %v\n", id, err)
-		return errors.New("задача не найдена")
-	}
-
-	res, err := db.Exec(`DELETE FROM scheduler WHERE id=?`, idInt)
-	if err != nil {
-		log.Printf("🚨 [deleteTaskByID] Ошибка выполнения DELETE: %v\n", err)
-		return err
-	}
-
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		log.Printf("🚨 [deleteTaskByID] Задача ID=%s не найдена\n", id)
-		return errors.New("задача не найдена")
-	}
-	log.Printf("✅ [deleteTaskByID] Задача ID=%s успешно удалена\n", id)
-	return nil
-}
-
-func updateTaskDate(id, newDate string) error {
-	log.Printf("🔍 [updateTaskDate] Обновляем дату задачи ID=%s на %s\n", id, newDate)
-	db, err := database.GetDB()
-	if err != nil {
-		log.Printf("🚨 [updateTaskDate] Ошибка подключения к базе: %v\n", err)
-		return errors.New("ошибка подключения к БД")
-	}
-
-	idInt, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		log.Printf("🚨 [updateTaskDate] Невалидный ID=%s: %v\n", id, err)
-		return errors.New("задача не найдена")
-	}
-
-	res, err := db.Exec(`UPDATE scheduler SET date=? WHERE id=?`, newDate, idInt)
-	if err != nil {
-		log.Printf("🚨 [updateTaskDate] Ошибка выполнения UPDATE: %v\n", err)
-		return err
-	}
-
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		log.Printf("🚨 [updateTaskDate] Задача ID=%s не найдена для обновления\n", id)
-		return errors.New("задача не найдена")
-	}
-	log.Printf("✅ [updateTaskDate] Дата задачи ID=%s успешно обновлена\n", id)
-	return nil
-}

@@ -35,12 +35,12 @@ func main() {
 
 // 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers(r *chi.Mux) {
-	r.Post("/api/task", api.AddTaskHandler)
+	r.Get("/api/nextdate", api.HandleNextDate) // +
+	r.Post("/api/task", api.AddTaskHandler)	// +
 	r.Get("/api/tasks", api.GetTaskHandler)
 	r.Put("/api/task", api.UpdateTaskHandler)
-	r.Delete("/api/task", api.DeleteTaskHandler)
 	r.Post("/api/task/done", api.DoneTaskHandler)
-	r.Get("/api/nextdate", api.HandleNextDate)
+	r.Delete("/api/task", api.DeleteTaskHandler)
 }
 
 // 🔥 startServer запускает сервер
