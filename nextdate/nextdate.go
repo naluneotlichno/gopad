@@ -34,14 +34,14 @@ func HandleNextDate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ✅ Возвращаем результат клиенту
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprint(w, nextDate)
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(nextDate))
 }
 
 // NextDate вычисляет следующую дату задачи на основе правила повторения.
 // Возвращает дату в формате `20060102` (YYYYMMDD) или ошибку, если правило некорректно.
 func NextDate(now time.Time, dateStr string, repeat string, status string) (string, error) {
-	
+
 	if dateStr == "" {
 		return "", fmt.Errorf("дата не задана")
 	}
@@ -70,7 +70,7 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 			for !nextDate.After(now) {
 				nextDate = nextDate.AddDate(1, 0, 0)
 			}
-		}	
+		}
 		return nextDate.Format("20060102"), nil
 	}
 
@@ -88,7 +88,7 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 			}
 		}
 
-		nextDate := parsedDate.AddDate(0, 0, days)	
+		nextDate := parsedDate.AddDate(0, 0, days)
 
 		for !nextDate.After(now) {
 			nextDate = nextDate.AddDate(0, 0, days)
@@ -103,4 +103,3 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 func isSameDate(a, b time.Time) bool {
 	return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
 }
-
