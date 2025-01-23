@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -152,4 +153,70 @@ func GetTaskByID(id int64) (Task, error) {
 	}
 	log.Printf("✅ [getTaskByID] Найдена задача: %#v\n", task)
 	return task, nil
+}
+
+func AddTask(t Task) (int64, error) {
+	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`
+
+	res, err := db.Exec(query, t.Date, t.Title, t.Comment, t.Repeat)
+	if err != nil {
+		return 0, fmt.Errorf("ошибка при добавлении задачи: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("ошибка при получении ID последней вставленной записи: %w", err)
+	}
+
+	return id, nil
+}
+
+func GetUpcomingTasks() ([]Task, error) {
+	query := `SELECT id, date, title, comment, repeat FROM scheduler`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при выполнении запроса: %w", err)
+	}
+	defer rows.Close()
+
+	tasks := []Task{}
+	now := time.Now()
+
+	for rows.Next() {
+		var task Task
+		err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при чтении строки из результата: %w", err)
+		}
+
+		taskDate, err := time.Parse("20060102", task.Date)
+		if err != nil {
+			return nil, fmt.Errorf("Ошибка при разборе даты задачи ID %d: %w", task.ID, err)
+		}
+
+		if taskDate.Before(now) || taskDate.Equal(now) {
+			nextDateStr, err := nextdate.NextDate(now, task.Date, task.Repeat, "list")
+			if err != nil {
+				return nil, fmt.Errorf("Ошибка при вычислении следующей даты для задачи ID %d: %w", task.ID, err)
+			}
+			task.Date = nextDateStr
+		}
+		tasks = append(tasks, task)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка при обработке результатов запроса: %w", err)
+	}
+
+	// Сортировка задач по дате
+	sort.Slice(tasks, func(i, j int) bool {
+		return tasks[i].Date < tasks[j].Date
+	})
+
+	// Ограничение списка задач до 50
+	if len(tasks) > 50 {
+		tasks = tasks[:50]
+	}
+
+	return tasks, nil
 }

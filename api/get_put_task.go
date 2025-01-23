@@ -26,6 +26,8 @@ type Task struct {
 // GetTaskByID получает задачу из таблицы scheduler по ID.
 // Возвращает ошибку, если не найдена.
 func GetTaskByID(id string) (Task, error) {
+
+	
 	db, _ := database.GetDB()
 
 	idInt, err := strconv.ParseInt(id, 10, 64)
@@ -116,45 +118,103 @@ func UpdateTask(task Task) error {
 
 // GetTaskHandler обрабатывает GET /api/task?id=<ID>
 func GetTaskHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	if id == "" {
-		http.Error(w, `{"error": "Не указан идентификатор"}`, http.StatusBadRequest)
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "отсутствует id"})
 		return
 	}
 
-	task, err := GetTaskByID(id)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		http.Error(w, `{"error": "Задача не найдена"}`, http.StatusNotFound)
+		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "недопустимый параметр id"})
 		return
+	}
+
+	foundTask, err := database.GetTaskByID(id)
+	if err != nil {
+		JsonResponse(w, http.StatusNotFound, map[string]string{"error": "задача не найдена"})
+		return
+	}
+
+	response := map[string]string{
+		"id":      strconv.FormatInt(foundTask.ID, 10),
+		"date":    foundTask.Date,
+		"title":   foundTask.Title,
+		"comment": foundTask.Comment,
+		"repeat":  foundTask.Repeat,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(task)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
-// UpdateTaskHandler обрабатывает PUT /api/task (JSON в теле)
+var task struct {
+	ID      string `json:"id"`
+	Date    string `json:"date"`
+	Title   string `json:"title"`
+	Comment string `json:"comment"`
+	Repeat  string `json:"repeat"`
+}
+
+
 func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var t Task
-	if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
-		http.Error(w, `{"error": "Ошибка при чтении данных"}`, http.StatusBadRequest)
+
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&task)
+
+	if err != nil {
+		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Неверный формат JSON"})
 		return
 	}
 
-	if t.ID == "" {
-		http.Error(w, `{"error": "Не указан идентификатор"}`, http.StatusBadRequest)
+	if task.ID == "" {
+		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Не указан идентификатор"})
 		return
 	}
 
-	// Сама логика валидации и обновления — в UpdateTask
-	if err := UpdateTask(t); err != nil {
-		// Для всех ошибок, которые мы вернули — сообщим их наружу
-		http.Error(w, fmt.Sprintf(`{"error": "%s"}`, adaptErrorMsg(err.Error())), http.StatusBadRequest)
+	id, err := strconv.ParseInt(task.ID, 10, 64)
+	if err != nil {
+		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Недопустимый формат идентификатора"})
 		return
 	}
 
-	// Если обновление прошло успешно — возвращаем пустой JSON
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte("{}"))
+	if task.Date == "" {
+		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Дата не может быть пустой"})
+		return
+	}
+
+	_, err = time.Parse(layout, task.Date)
+	if err != nil {
+		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Неверный формат даты"})
+		return
+	}
+
+	if task.Title == "" {
+		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Заголовок не может быть пустым"})
+		return
+	}
+
+	updatedTask := database.Task{
+		ID:      id,
+		Date:    task.Date,
+		Title:   task.Title,
+		Comment: task.Comment,
+		Repeat:  task.Repeat,
+	}
+
+	taskErr := database.UpdateTask(updatedTask)
+	if taskErr != nil {
+		if errors.Is(taskErr, database.ErrTask) {
+			JsonResponse(w, http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+		} else {
+			JsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка обновления задачи"})
+		}
+		return
+	}
+
+	JsonResponse(w, http.StatusOK, map[string]interface{}{})
+
 }
 
 // adaptErrorMsg просто помогает вернуть нужную строку ошибки.
