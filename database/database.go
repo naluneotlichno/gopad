@@ -11,7 +11,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/naluneotlichno/FP-GO-API/api"
 )
 
 var db *sql.DB
