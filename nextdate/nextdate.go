@@ -43,19 +43,19 @@ func HandleNextDate(w http.ResponseWriter, r *http.Request) {
 func NextDate(now time.Time, dateStr string, repeat string, status string) (string, error) {
 
 	if dateStr == "" {
-		return "", fmt.Errorf("дата не задана")
+		return "", nil
 	}
 
 	parsedDate, err := time.Parse("20060102", dateStr)
 	if err != nil {
-		return "", fmt.Errorf("ошибка парсинга")
+		return "", nil
 	}
 
 	if repeat == "" {
 		if parsedDate.After(now) {
 			return parsedDate.Format("20060102"), nil
 		}
-		return "", fmt.Errorf("правило повторения не задано")
+		return "", nil
 	}
 
 	if strings.HasPrefix(repeat, "d ") {
@@ -63,7 +63,7 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 		days, err := strconv.Atoi(daysStr)
 
 		if err != nil || days < 1 || days > 400 {
-			return "", fmt.Errorf("некорректный формат повторения")
+			return "", nil
 		}
 
 		if status != "done" {
