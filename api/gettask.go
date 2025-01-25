@@ -117,7 +117,7 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
     defer rows.Close()
 
     // ✅ Сканируем результат в срез структур TaskItem
-    var tasks []TaskItem
+    tasks := make([]TaskItem, 0)
     for rows.Next() {
         var (
             id      int64
