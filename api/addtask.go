@@ -119,6 +119,8 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Получен запрос на добавление задачи: %+v", req) // Добавленное логирование
+
 	req.Title = strings.TrimSpace(req.Title)
 	if req.Title == "" {
 		JsonResponse(w, http.StatusBadRequest, AddTaskResponse{Error: "не указан заголовок задачи"})
@@ -155,7 +157,7 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	log.Printf("Adding task with Date: %s", taskDate.Format(layout)) // Добавленное логирование
+	log.Printf("Добавление задачи с датой: %s", taskDate.Format(layout)) // Добавленное логирование
 
 	newTask := database.Task{
 		Date:    taskDate.Format(layout),
@@ -163,6 +165,8 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 		Comment: req.Comment,
 		Repeat:  req.Repeat,
 	}
+
+	log.Printf("Сохранение задачи в базе данных: %+v", newTask) // Добавленное логирование
 
 	id, err := database.AddTask(newTask)
 	if err != nil {
