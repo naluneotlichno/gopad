@@ -41,65 +41,83 @@ func HandleNextDate(w http.ResponseWriter, r *http.Request) {
 // NextDate вычисляет следующую дату задачи на основе правила повторения.
 // Возвращает дату в формате `20060102` (YYYYMMDD) или ошибку, если правило некорректно.
 func NextDate(now time.Time, dateStr string, repeat string, status string) (string, error) {
+    if dateStr == "" {
+        return "", errors.New("дата не может быть пустой")
+    }
 
-	if dateStr == "" {
-		return "", nil
-	}
+    parsedDate, err := time.Parse("20060102", dateStr)
+    if err != nil {
+        return "", fmt.Errorf("ошибка разбора даты: %w", err)
+    }
 
-	parsedDate, err := time.Parse("20060102", dateStr)
-	if err != nil {
-		return "", nil
-	}
+    if repeat == "" {
+        if parsedDate.After(now) {
+            return parsedDate.Format("20060102"), nil
+        }
+        return "", errors.New("дата в прошлом и правило повторения не задано")
+    }
 
-	if repeat == "" {
-		if parsedDate.After(now) {
-			return parsedDate.Format("20060102"), nil
-		}
-		return "", nil
-	}
+    if strings.HasPrefix(repeat, "d ") {
+        daysStr := strings.TrimPrefix(repeat, "d ")
+        days, err := strconv.Atoi(daysStr)
+        if err != nil || days < 1 || days > 400 {
+            return "", errors.New("некорректное значение дней")
+        }
 
-	if strings.HasPrefix(repeat, "d ") {
-		daysStr := strings.TrimPrefix(repeat, "d ")
-		days, err := strconv.Atoi(daysStr)
+        nextDate := parsedDate.AddDate(0, 0, days)
+        for !nextDate.After(now) {
+            nextDate = nextDate.AddDate(0, 0, days)
+        }
 
-		if err != nil || days < 1 || days > 400 {
-			return "", nil
-		}
+        return nextDate.Format("20060102"), nil
+    }
 
-		if status != "done" {
-			if isSameDate(parsedDate, now) {
-				return parsedDate.Format("20060102"), nil
-			}
-		}
+    if strings.HasPrefix(repeat, "w ") {
+        weeksStr := strings.TrimPrefix(repeat, "w ")
+        weeks, err := strconv.Atoi(weeksStr)
+        if err != nil || weeks < 1 || weeks > 52 {
+            return "", errors.New("некорректное значение недель")
+        }
 
-		nextDate := parsedDate.AddDate(0, 0, days)
+        nextDate := parsedDate.AddDate(0, 0, weeks*7)
+        for !nextDate.After(now) {
+            nextDate = nextDate.AddDate(0, 0, weeks*7)
+        }
 
-		for !nextDate.After(now) {
-			nextDate = nextDate.AddDate(0, 0, days)
-		}
+        return nextDate.Format("20060102"), nil
+    }
 
-		return nextDate.Format("20060102"), nil
-	}
+    if strings.HasPrefix(repeat, "m ") {
+        monthsStr := strings.TrimPrefix(repeat, "m ")
+        months, err := strconv.Atoi(monthsStr)
+        if err != nil || months < 1 || months > 120 {
+            return "", errors.New("некорректное значение месяцев")
+        }
 
-	if repeat == "y" {
-		nextDate := parsedDate.AddDate(1, 0, 0)
-		if parsedDate.Month() == time.February && parsedDate.Day() == 29 {
-			if nextDate.Month() != time.February || nextDate.Day() != 29 {
-				nextDate = time.Date(nextDate.Year(), time.March, 1, 0, 0, 0, 0, nextDate.Location())
-			}
-		}
+        nextDate := parsedDate.AddDate(0, months, 0)
+        for !nextDate.After(now) {
+            nextDate = nextDate.AddDate(0, months, 0)
+        }
 
-		if nextDate.Before(now) {
-			for !nextDate.After(now) {
-				nextDate = nextDate.AddDate(1, 0, 0)
-			}
-		}
-		return nextDate.Format("20060102"), nil
-	}
+        return nextDate.Format("20060102"), nil
+    }
 
-	return "", errors.New("неподдерживаемый формат повторения")
+    if repeat == "y" {
+        nextDate := parsedDate.AddDate(1, 0, 0)
+        if parsedDate.Month() == time.February && parsedDate.Day() == 29 {
+            if nextDate.Month() != time.February || nextDate.Day() != 29 {
+                nextDate = time.Date(nextDate.Year(), time.March, 1, 0, 0, 0, 0, nextDate.Location())
+            }
+        }
+
+        for !nextDate.After(now) {
+            nextDate = nextDate.AddDate(1, 0, 0)
+        }
+
+        return nextDate.Format("20060102"), nil
+    }
+
+    log.Printf("❌ Некорректный формат repeat: %s", repeat)
+    return "", errors.New("неподдерживаемый формат повторения")
 }
 
-func isSameDate(a, b time.Time) bool {
-	return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
-}
