@@ -145,7 +145,7 @@ func GetTaskByID(id int64) (Task, error) {
 	err := db.QueryRow(query, id).Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Printf("🚨 [getTaskByID] Задача ID=%s не найдена\n", id)
+			log.Printf("🚨 [getTaskByID] Задача ID=%d не найдена\n", id)
 			return Task{}, errors.New("задача не найдена")
 		}
 		log.Printf("🚨 [getTaskByID] Ошибка выполнения запроса: %v\n", err)
@@ -191,13 +191,13 @@ func GetUpcomingTasks() ([]Task, error) {
 
 		taskDate, err := time.Parse("20060102", task.Date)
 		if err != nil {
-			return nil, fmt.Errorf("Ошибка при разборе даты задачи ID %d: %w", task.ID, err)
+			return nil, fmt.Errorf("ошибка при разборе даты задачи ID %d: %w", task.ID, err)
 		}
 
 		if taskDate.Before(now) || taskDate.Equal(now) {
 			nextDateStr, err := nextdate.NextDate(now, task.Date, task.Repeat, "list")
 			if err != nil {
-				return nil, fmt.Errorf("Ошибка при вычислении следующей даты для задачи ID %d: %w", task.ID, err)
+				return nil, fmt.Errorf("ошибка при вычислении следующей даты для задачи ID %d: %w", task.ID, err)
 			}
 			task.Date = nextDateStr
 		}

@@ -123,7 +123,7 @@ type ErrorResponse struct {
 func Tasks(w http.ResponseWriter, r *http.Request) {
 	tasks, err := database.GetUpcomingTasks()
 	if err != nil {
-		log.Printf("Ошибка получения задач: %w", err)
+		log.Printf("Ошибка получения задач: %v", err)
 		JsonResponse(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
