@@ -107,6 +107,7 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 func AddTask(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		log.Printf("Ошибка при чтении тела запроса: %v", err)
 		JsonResponse(w, http.StatusBadRequest, AddTaskResponse{Error: "не удалось прочитать тело запроса"})
 		return
 	}
@@ -115,6 +116,7 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 	var req AddTaskRequest
 	err = json.Unmarshal(body, &req)
 	if err != nil {
+		log.Printf("Ошибка при декодировании JSON: %v", err)
 		JsonResponse(w, http.StatusBadRequest, AddTaskResponse{Error: "неверный формат JSON"})
 		return
 	}
@@ -123,6 +125,7 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 
 	req.Title = strings.TrimSpace(req.Title)
 	if req.Title == "" {
+		log.Printf("Не указан заголовок задачи")
 		JsonResponse(w, http.StatusBadRequest, AddTaskResponse{Error: "не указан заголовок задачи"})
 		return
 	}
@@ -136,6 +139,7 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 
 	taskDate, err = time.Parse(layout, req.Date)
 	if err != nil {
+		log.Printf("Неверный формат даты: %v", err)
 		JsonResponse(w, http.StatusBadRequest, AddTaskResponse{Error: "дата указана в неверном формате"})
 		return
 	}
@@ -143,6 +147,7 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 	if taskDate.Before(now) {
 		if strings.TrimSpace(req.Repeat) == "" {
 			taskDate = now
+			log.Printf("Добавление задачи с текущей датой: %s", taskDate.Format(layout))
 		} else {
 			nextDateStr, err := nextdate.NextDate(now, req.Date, req.Repeat, "add")
 			if err != nil {
@@ -156,6 +161,7 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 				JsonResponse(w, http.StatusInternalServerError, AddTaskResponse{Error: "не удалось распарсить следующую дату"})
 				return
 			}
+			log.Printf("Добавление задачи с следующей датой: %s", taskDate.Format(layout))
 		}
 	}
 
@@ -172,10 +178,12 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 
 	id, err := database.AddTask(newTask)
 	if err != nil {
+		log.Printf("Ошибка при сохранении задачи в базе данных: %v", err)
 		JsonResponse(w, http.StatusInternalServerError, AddTaskResponse{Error: err.Error()})
 		return
 	}
 
+	log.Printf("Задача успешно добавлена с ID=%d", id) // Добавленное логирование
 	JsonResponse(w, http.StatusCreated, AddTaskResponse{ID: fmt.Sprintf("%d", id)})
 }
 

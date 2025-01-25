@@ -41,13 +41,15 @@ func HandleNextDate(w http.ResponseWriter, r *http.Request) {
 // NextDate вычисляет следующую дату задачи на основе правила повторения.
 // Возвращает дату в формате `20060102` (YYYYMMDD) или ошибку, если правило некорректно.
 func NextDate(now time.Time, dateStr string, repeat string, status string) (string, error) {
-
+	log.Printf("🔍 Вызвана функция NextDate с параметрами: now=%s, date=%s, repeat=%s, status=%s\n", now.Format("20060102"), dateStr, repeat, status)
 	if dateStr == "" {
+		log.Println("❌ Не указана дата")
 		return "", nil
 	}
 
 	parsedDate, err := time.Parse("20060102", dateStr)
 	if err != nil {
+		log.Printf("❌ Ошибка парсинга даты: %v\n", err)
 		return "", nil
 	}
 
@@ -63,7 +65,8 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 		days, err := strconv.Atoi(daysStr)
 
 		if err != nil || days < 1 || days > 400 {
-			return "", nil
+			log.Printf("❌ Ошибка парсинга дней повторения: %s\n", repeat)
+			return "", errors.New("неверное правило повторения")
 		}
 
 		if status != "done" {
@@ -97,6 +100,7 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 		return nextDate.Format("20060102"), nil
 	}
 
+	log.Printf("❌ Неподдерживаемый формат повторения: %s\n", repeat)
 	return "", errors.New("неподдерживаемый формат повторения")
 }
 
