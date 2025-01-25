@@ -113,7 +113,7 @@ type TaskResponseItem struct {
 }
 
 type TasksR struct {
-	Tasks []TaskResponseItem `json:"tasks"`
+	List []TaskResponseItem `json:"list"`
 }
 
 type ErrorResponse struct {
@@ -128,7 +128,7 @@ func Tasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := TasksR{Tasks: []TaskResponseItem{}}
+	response := TasksR{List: []TaskResponseItem{}}
 
 	for _, t := range tasks {
 		taskItem := TaskResponseItem{
@@ -138,7 +138,7 @@ func Tasks(w http.ResponseWriter, r *http.Request) {
 			Comment: t.Comment,
 			Repeat:  t.Repeat,
 		}
-		response.Tasks = append(response.Tasks, taskItem)
+		response.List = append(response.List, taskItem)
 	}
 
 	JsonResponse(w, http.StatusOK, response)
