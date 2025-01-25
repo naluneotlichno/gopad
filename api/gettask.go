@@ -35,8 +35,7 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 
 	// ✅ Проверяем метод (GET)
 	if r.Method != http.MethodGet {
-		log.Printf("❌ [MethodCheck] Метод %s не поддерживается", r.Method)
-		http.Error(w, `{"error":"Метод не поддерживается"}`, http.StatusMethodNotAllowed)
+		JsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Метод не поддерживается"})
 		return
 	}
 
@@ -44,21 +43,13 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("✅ [DBConnection] Получаем соединение с базой")
 	db, err := database.GetDB()
 	if err != nil {
-		log.Printf("❌ [DBConnection] Ошибка подключения к базе данных: %v", err)
-		http.Error(w, `{"error":"Ошибка подключения к БД"}`, http.StatusInternalServerError)
+		JsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка подключения к БД"})
 		return
 	}
 
 	// ✅ Получаем параметр search=? из URL
 	searchParam := r.URL.Query().Get("search")
-
-	// Можно ограничить кол-во записей, чтобы не возращать "тонну" данных.
 	limit := 50
-
-	// Запросим нужные поля
-	// Т.к. тест требует сортировку "по дате в сторону увеличения",
-	// добавим "ORDER BY date".
-	// Если searchParam пустой → выбираем все.
 	var rows *sql.Rows
 
 	if searchParam == "" {
@@ -128,7 +119,7 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		if err := rows.Scan(&id, &date, &title, &comment, &repeat); err != nil {
 			log.Printf("❌ [DBScan] Ошибка чтения строки: %v", err)
-			http.Error(w, `{"error":"Ошибка чтения из БД"}`, http.StatusInternalServerError)
+			JsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка чтения строки"})
 			return
 		}
 		tasks = append(tasks, TaskItem{
@@ -153,11 +144,7 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Формируем ответ
-	response := TasksResponse{
-		Tasks: tasks,
-	}
-
-	// Отправляем JSON
+	response := TasksResponse{Tasks: tasks}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("❌ [Response] Ошибка кодирования JSON: %v", err)
 	}
