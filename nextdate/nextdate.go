@@ -84,6 +84,23 @@ func NextDate(now time.Time, dateStr string, repeat string, status string) (stri
 		return nextDate.Format("20060102"), nil
 	}
 
+
+    if strings.HasPrefix(repeat, "w ") {
+        weeksStr := strings.TrimPrefix(repeat, "w ")
+        weeks, err := strconv.Atoi(weeksStr)
+        if err != nil || weeks < 1 || weeks > 52 {
+            log.Printf("Invalid repeat format: %s", repeat)
+            return "", errors.New("неверное правило повторения")
+        }
+
+        nextDate := parsedDate.AddDate(0, 0, weeks*7)
+        for !nextDate.After(now) {
+            nextDate = nextDate.AddDate(0, 0, weeks*7)
+        }
+
+        return nextDate.Format("20060102"), nil
+    }
+
 	if repeat == "y" {
 		nextDate := parsedDate.AddDate(1, 0, 0)
 		if parsedDate.Month() == time.February && parsedDate.Day() == 29 {
