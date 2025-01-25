@@ -27,7 +27,7 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		log.Printf("🚨 [DoneTaskHandler] Ошибка парсинга ID=%s: %v\n", id, err)
+		log.Printf("🚨 [DoneTaskHandler] Ошибка парсинга ID=%d: %v\n", id, err)
 		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор"})
 		return
 	}
@@ -38,7 +38,7 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 			JsonResponse(w, http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
 			return
 		}
-		log.Printf("🚨 [DoneTaskHandler] Ошибка получения задачи ID=%s: %v\n", id, err)
+		log.Printf("🚨 [DoneTaskHandler] Ошибка получения задачи ID=%d: %v\n", id, err)
 		JsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задачи"})
 		return
 	}
@@ -46,9 +46,9 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("✅ [DoneTaskHandler] Найдена задача: %#v\n", task)
 
 	if task.Repeat == "" {
-		log.Printf("🔍 [DoneTaskHandler] repeat пустой. Удаляем задачу ID=%s\n", id)
+		log.Printf("🔍 [DoneTaskHandler] repeat пустой. Удаляем задачу ID=%d\n", id)
 		if err := database.DeleteTask(id); err != nil {
-			log.Printf("🚨 [DoneTaskHandler] Ошибка при удалении задачи ID=%s: %v\n", id, err)
+			log.Printf("🚨 [DoneTaskHandler] Ошибка при удалении задачи ID=%d: %v\n", id, err)
 			JsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении задачи"})
 			return
 		}
@@ -93,22 +93,22 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		log.Printf("🚨 [DeleteTaskHandler] Ошибка парсинга ID=%s: %v\n", id, err)
+		log.Printf("🚨 [DeleteTaskHandler] Ошибка парсинга ID=%d: %v\n", id, err)
 		JsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор"})
 		return
 	}
 
-	log.Printf("🔍 [DeleteTaskHandler] Пытаемся удалить задачу с ID=%s\n", id)
+	log.Printf("🔍 [DeleteTaskHandler] Пытаемся удалить задачу с ID=%d\n", id)
 	if err := database.DeleteTask(id); err != nil {
 		if errors.Is(err, fmt.Errorf("задача не найдена")) {
 			JsonResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
-		log.Printf("🚨 [DeleteTaskHandler] Ошибка удаления задачи ID=%s: %v\n", id, err)
+		log.Printf("🚨 [DeleteTaskHandler] Ошибка удаления задачи ID=%d: %v\n", id, err)
 		JsonResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
-	log.Printf("✅ [DeleteTaskHandler] Задача ID=%s успешно удалена\n", id)
+	log.Printf("✅ [DeleteTaskHandler] Задача ID=%d успешно удалена\n", id)
 	JsonResponse(w, http.StatusOK, map[string]interface{}{})
 }

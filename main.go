@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+
 	"github.com/go-chi/chi/v5"
 	"github.com/naluneotlichno/FP-GO-API/api"
 	"github.com/naluneotlichno/FP-GO-API/database"
@@ -36,9 +37,7 @@ func main() {
 
 // 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers(r *chi.Mux) {
-	r.Get("/api/nextdate", nextdate.HandleNextDate) // +
-	
-	r.Post("/api/task", api.AddTaskHandler)	// +
+	r.Get("/api/nextdate", nextdate.HandleNextDate) // +r.Post("/api/task", api.AddTaskHandler)	// +
 	r.Get("/api/tasks", api.Tasks) // +
 	r.Get("/api/task", api.GetTaskHandler) // +
 	r.Put("/api/task", api.UpdateTaskHandler)	// +

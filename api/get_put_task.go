@@ -217,22 +217,3 @@ func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// adaptErrorMsg просто помогает вернуть нужную строку ошибки.
-// Можно сделать switch, если нужно отличать "task not found" от других.
-func adaptErrorMsg(errMsg string) string {
-	switch {
-	case strings.Contains(errMsg, "task not found"):
-		return "Задача не найдена"
-	case strings.Contains(errMsg, "invalid date format"):
-		return "Некорректный формат даты"
-	case strings.Contains(errMsg, "date is in the past"):
-		return "Дата не может быть меньше сегодняшней"
-	case strings.Contains(errMsg, "empty"):
-		return "Пустое поле title"
-	case strings.Contains(errMsg, "invalid repeat format"):
-		return "Неверный формат repeat"
-	default:
-		// Пусть будет общий случай
-		return errMsg
-	}
-}
