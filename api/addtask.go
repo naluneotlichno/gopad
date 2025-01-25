@@ -146,11 +146,13 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 		} else {
 			nextDateStr, err := nextdate.NextDate(now, req.Date, req.Repeat, "add")
 			if err != nil {
+				log.Printf("Ошибка при расчёте следующей даты: %v", err)
 				JsonResponse(w, http.StatusBadRequest, AddTaskResponse{Error: "неверное правило повторения"})
 				return
 			}
 			taskDate, err = time.Parse(layout, nextDateStr)
 			if err != nil {
+				log.Printf("Ошибка при распарсивании следующей даты: %v", err)
 				JsonResponse(w, http.StatusInternalServerError, AddTaskResponse{Error: "не удалось распарсить следующую дату"})
 				return
 			}
