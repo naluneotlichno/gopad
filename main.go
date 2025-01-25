@@ -37,6 +37,7 @@ func main() {
 // 🔥 registerHandlers регистрирует все хендлеры
 func registerHandlers(r *chi.Mux) {
 	r.Get("/api/nextdate", nextdate.HandleNextDate) // +
+	r.Post("/api/task", api.AddTaskHandler)         // +
 	r.Get("/api/tasks", api.Tasks)                  // +
 	r.Get("/api/task", api.GetTaskHandler)          // +
 	r.Put("/api/task", api.UpdateTaskHandler)       // +
